@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-color: #161616;
+}
+
+.mobile-dialog-panel {
+  background-color: #161616;
+}
+
+.yarl__slide_captions_container {
+  @apply text-lg text-white bg-opacity-75 px-4 py-6 mb-4 rounded-md !important;
+}
+
+/* Ensures the layout structure */
+.page-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; 
+}
+
+.content-wrap {
+  flex: 1;
+}
+
+footer {
+  /* background-color: #333; 
+  color: #fff;
+  text-align: center;
+  padding: 20px 10px; */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+body::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+body {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
