@@ -7,9 +7,11 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get('slug');
     
+    // Images always in /data/images (same for local and production)
+    const baseDir = path.join(process.cwd(), 'data', 'images');
     const imagesDir = slug 
-      ? path.join(process.cwd(), 'public', 'images', slug)
-      : path.join(process.cwd(), 'public', 'images');
+      ? path.join(baseDir, slug)
+      : baseDir;
     
     // Read directory contents
     const files = await fs.readdir(imagesDir);
@@ -26,9 +28,10 @@ export async function GET(request) {
         
         // Get the image filename (remove .json extension)
         const imageFile = jsonFile.replace('.json', '');
+        // Images served via API route instead of /public
         const imagePath = slug 
-          ? `/images/${slug}/${imageFile}`
-          : `/images/${imageFile}`;
+          ? `/api/images/serve/${slug}/${imageFile}`
+          : `/api/images/serve/${imageFile}`;
         
         return {
           src: imagePath,

@@ -45,7 +45,7 @@ npm install
 
 3. Add your images:
 
-Place images and their corresponding `.json` metadata files in `public/images/`:
+Place images and their corresponding `.json` metadata files in `data/images/`:
 - Root level images (with `"website": true`) appear on the home page
 - Subfolder images (with `"private_link": true`) appear on `/subfolder-name` URLs
 
@@ -94,7 +94,10 @@ gallery-nextjs/
 │   │   └── page.jsx        # Dynamic album pages
 │   ├── api/
 │   │   └── images/
-│   │       └── route.js    # API endpoint for images
+│   │       ├── route.js    # API endpoint for image metadata
+│   │       └── serve/
+│   │           └── [...path]/
+│   │               └── route.js  # API endpoint for serving image files
 │   ├── layout.jsx          # Root layout
 │   ├── page.jsx            # Home page
 │   └── globals.css         # Global styles
@@ -104,22 +107,29 @@ gallery-nextjs/
 │   ├── Footer.jsx          # Footer component
 │   ├── Spinner.jsx         # Loading spinner
 │   └── spinner.css         # Spinner styles
-├── public/
-│   └── images/             # Image storage
+├── data/
+│   └── images/             # Image storage (gitignored)
 │       ├── image1.jpg
 │       ├── image1.jpg.json
 │       └── album-name/     # Subfolder for hidden albums
 │           ├── photo.jpg
 │           └── photo.jpg.json
+├── public/
+│   └── (static assets)
 └── ...config files
 \`\`\`
 
 ## How It Works
 
-- Images are stored in `public/images/` with corresponding `.json` metadata files
-- The API reads the file system at runtime (no database needed)
+### Image Storage & Serving
+- Images stored in `/data/images` (same path for local development and production)
+- Images served through `/api/images/serve/[...path]` route (not directly from `/public`)
+- Metadata read from `.json` files at runtime (no database needed)
+- API route provides security (path validation) and proper caching headers
+
+### Content Structure  
 - Home page shows images where `"website": true`
-- Album pages (`/album-name`) show images from `public/images/album-name/` where `"private_link": true`
+- Album pages (`/album-name`) show images from subfolders where `"private_link": true`
 - Filters automatically populate from metadata:
   - People and tags appear in the **Filter** dropdown
   - Cameras ("Make Model") and lenses appear in the **Gear** dropdown
@@ -138,17 +148,31 @@ This app requires a Node.js runtime and works with:
 - **Railway**
 - **DigitalOcean App Platform**
 
-**Important**: Configure persistent storage for `public/images/` so images survive redeployments. With Coolify, mount a persistent volume to `/app/public/images`.
+### Coolify Deployment (Recommended)
 
-### Adding Images After Deployment
+**Setup persistent storage:**
+1. In Coolify, create a persistent volume
+2. Mount it to `/app/data/images` 
+3. Upload your images + `.json` files to the mounted volume
+   - Structure: `/app/data/images/photo.jpg` and `/app/data/images/photo.jpg.json`
+   - For albums: `/app/data/images/album-name/photo.jpg`
 
-- **Coolify**: SSH into your server and use `docker exec` to access the container, or mount a volume and SFTP directly to it
-- **Vercel/Netlify**: Images must be in your Git repository (commit and push to add new images)
-- **Alternative**: Use object storage (S3/R2/Spaces) for production-scale deployments
+**Why this works:**
+- Same `/data/images` path works locally and in production
+- No environment variables needed
+- SFTP/rsync directly to persistent storage
+- Images survive container rebuilds
+
+### Vercel/Netlify Deployment
+
+These platforms don't support persistent file storage. Two options:
+
+1. **Small galleries**: Commit images to git (remove from `.gitignore`)
+2. **Large galleries**: Switch to object storage (S3/Cloudflare R2) - requires code modification
 
 ## Environment Variables
 
-No environment variables required! Everything runs from the file system.
+No environment variables needed - images always in `/data/images`
 
 ## License
 

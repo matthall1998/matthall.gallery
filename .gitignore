@@ -17,10 +17,8 @@
 .DS_Store
 *.pem
 
-# images (user-uploaded content)
-# Keep only /public/images/ folder, ignore all contents
-/public/images/*
-!/public/images/.gitkeep
+# images - user content not in git
+/data/images
 
 # debug
 npm-debug.log*
