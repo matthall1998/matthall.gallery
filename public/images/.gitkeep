@@ -1,0 +1,2 @@
+# This file ensures the images directory exists in git
+# Coolify persistent storage will be mounted to this directory
