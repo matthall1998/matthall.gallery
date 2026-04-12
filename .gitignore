@@ -18,13 +18,9 @@
 *.pem
 
 # images (user-uploaded content)
-# Keep folder structure for Coolify persistent storage mount
-/public/images/**/*.json
-/public/images/**/*.jpg
-/public/images/**/*.jpeg
-/public/images/**/*.png
-/public/images/**/*.gif
-/public/images/**/*.webp
+# Keep only /public/images/ folder, ignore all contents
+/public/images/*
+!/public/images/.gitkeep
 
 # debug
 npm-debug.log*
