@@ -50,6 +50,8 @@ export async function GET(request) {
           private_link: metadata.private_link,
           shot_date: metadata.shot_date || '',
           export_date: metadata.export_date || '',
+          image_width: metadata.image_width,
+          image_height: metadata.image_height,
         };
       })
     );
