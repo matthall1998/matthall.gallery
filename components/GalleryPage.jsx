@@ -1,24 +1,98 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Gallery from "@/components/Gallery";
-import Lightbox from "yet-another-react-lightbox";
-import Captions from "yet-another-react-lightbox/plugins/captions";
-import Zoom from "yet-another-react-lightbox/plugins/zoom";
-import Download from "yet-another-react-lightbox/plugins/download";
-import "yet-another-react-lightbox/styles.css";
-import "yet-another-react-lightbox/plugins/captions.css";
+import PhotoSwipeLightbox from "photoswipe/lightbox";
+import "photoswipe/style.css";
 import Spinner from "@/components/Spinner";
 
 export default function GalleryPage({ slug = null }) {
   const [loading, setLoading] = useState(true);
   const [images, setImages] = useState([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedTag, setSelectedTag] = useState(null);
   const [shuffleKey, setShuffleKey] = useState(0);
+  const lightboxRef = useRef(null);
+
+  // Initialize PhotoSwipe
+  useEffect(() => {
+    if (!lightboxRef.current && images.length > 0) {
+      const lightbox = new PhotoSwipeLightbox({
+        gallery: '#gallery-container',
+        children: 'a',
+        pswpModule: () => import('photoswipe'),
+        initialZoomLevel: 'fit',
+        secondaryZoomLevel: (zoomLevelObject) => {
+          // Zoom to 1.5x the fit level, but never beyond actual size
+          return Math.min(1, zoomLevelObject.fit * 1.5);
+        },
+        maxZoomLevel: (zoomLevelObject) => {
+          // Max 2x the fit level, but never beyond actual size
+          return Math.min(1, zoomLevelObject.fit * 2);
+        },
+        paddingFn: (viewportSize) => {
+          return {
+            top: 30,
+            bottom: 30,
+            left: 0,
+            right: 0
+          };
+        },
+      });
+
+      // Add caption display
+      lightbox.on('uiRegister', function() {
+        lightbox.pswp.ui.registerElement({
+          name: 'custom-caption',
+          order: 9,
+          isButton: false,
+          appendTo: 'root',
+          html: '',
+          onInit: (el, pswp) => {
+            el.style.cssText = 'position: absolute; left: 0; right: 0; bottom: 0; width: 100%; background: rgba(0, 0, 0, 0.75); padding: 20px 16px; text-align: center; color: white;';
+            
+            lightbox.pswp.on('change', () => {
+              const currSlideElement = lightbox.pswp.currSlide?.data?.element;
+              let captionHTML = '';
+              
+              if (currSlideElement) {
+                const caption = currSlideElement.dataset.caption || '';
+                const camera = currSlideElement.dataset.camera || '';
+                const lens = currSlideElement.dataset.lens || '';
+                const iso = currSlideElement.dataset.iso || '';
+                const shutter = currSlideElement.dataset.shutter || '';
+                const aperture = currSlideElement.dataset.aperture || '';
+                
+                const gear = [camera, lens].filter(Boolean).join(' • ');
+                const exif = [
+                  iso ? `ISO ${iso.replace(/^ISO\s*/i, '')}` : '',
+                  shutter,
+                  aperture
+                ].filter(Boolean).join(' • ');
+                
+                if (gear) captionHTML += `<div style="font-size: 18px; margin-bottom: 4px;">${gear}</div>`;
+                if (exif) captionHTML += `<div style="font-size: 14px; color: #ccc;">${exif}</div>`;
+              }
+              
+              el.innerHTML = captionHTML || '';
+              el.style.display = captionHTML ? 'block' : 'none';
+            });
+          }
+        });
+      });
+
+      lightbox.init();
+      lightboxRef.current = lightbox;
+    }
+
+    return () => {
+      if (lightboxRef.current) {
+        lightboxRef.current.destroy();
+        lightboxRef.current = null;
+      }
+    };
+  }, [images]);
 
   useEffect(() => {
     const loadImages = async () => {
@@ -110,39 +184,6 @@ export default function GalleryPage({ slug = null }) {
     loadImages();
   }, [slug, selectedTag, shuffleKey]);
 
-  const handleImageClick = (index) => {
-    setCurrentIndex(index);
-    setIsOpen(true);
-  };
-
-  // Memoize slides
-  const slides = useMemo(() => {
-    return images.map((img) => {
-      const base = img.description || "";
-      const exifLine = [
-        img.iso && String(img.iso).trim() ? `ISO ${String(img.iso).replace(/^ISO\s*/i, "")}` : "",
-        img.shutter || "",
-        img.aperture || "",
-      ]
-        .filter(Boolean)
-        .join(" • ");
-
-      let descriptionNode = base;
-      if (exifLine && base) {
-        descriptionNode = (
-          <div>
-            <div>{base}</div>
-            <div className="mt-1 text-sm text-gray-400">{exifLine}</div>
-          </div>
-        );
-      } else if (exifLine) {
-        descriptionNode = <div className="text-sm text-gray-400">{exifLine}</div>;
-      }
-
-      return { ...img, description: descriptionNode };
-    });
-  }, [images]);
-
   if (loading) {
     return (
       <div className="page-container">
@@ -175,28 +216,7 @@ export default function GalleryPage({ slug = null }) {
         }}
       />
       <main className="content-wrap">
-        <Gallery images={images} onImageClick={handleImageClick} />
-
-        <Lightbox
-          plugins={[Captions, Zoom, Download]}
-          open={isOpen}
-          close={() => setIsOpen(false)}
-          slides={slides}
-          index={currentIndex}
-          on={{
-            view: ({ index }) => setCurrentIndex(index),
-          }}
-          captions={{ 
-            showToggle: true,
-            descriptionTextAlign: "center",
-            descriptionMaxLines: 4,
-          }}
-          zoom={{
-            maxZoomPixelRatio: 1,
-            zoomInMultiplier: 1.5,
-            scrollToZoom: false,
-          }}
-        />
+        <Gallery images={images} />
       </main>
       <Footer />
     </div>

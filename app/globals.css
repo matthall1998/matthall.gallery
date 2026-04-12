@@ -10,10 +10,6 @@ body {
   background-color: #161616;
 }
 
-.yarl__slide_captions_container {
-  @apply text-lg text-white bg-opacity-75 px-4 py-6 rounded-md !important;
-}
-
 /* Ensures the layout structure */
 .page-container {
   display: flex;
