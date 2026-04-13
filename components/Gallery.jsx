@@ -29,7 +29,7 @@ const Gallery = ({ images }) => {
                 src={image.src}
                 alt={`Gallery image ${i + 1}`}
                 effect="blur"
-                style={{ width: "100%", display: "block", cursor: "pointer" }}
+                style={{ width: "100%", height: "auto", display: "block", cursor: "pointer" }}
               />
             </a>
           ))}
