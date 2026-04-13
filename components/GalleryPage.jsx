@@ -22,6 +22,9 @@ export default function GalleryPage({ slug = null }) {
         gallery: '#gallery-container',
         children: 'a',
         pswpModule: () => import('photoswipe'),
+        bgOpacity: 1,
+        hideAnimationDuration: 200,
+        showAnimationDuration: 200,
         initialZoomLevel: 'fit',
         secondaryZoomLevel: (zoomLevelObject) => {
           // Zoom to 1.5x the fit level, but never beyond actual size

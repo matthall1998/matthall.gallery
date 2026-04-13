@@ -10,6 +10,11 @@ body {
   background-color: #161616;
 }
 
+/* PhotoSwipe background */
+.pswp__bg {
+  background-color: #000000 !important;
+}
+
 /* Ensures the layout structure */
 .page-container {
   display: flex;
