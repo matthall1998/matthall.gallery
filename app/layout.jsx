@@ -2,7 +2,7 @@ import './globals.css'
 import Script from 'next/script'
 
 export const metadata = {
-  title: 'Matt Hall - Gallery',
+  title: 'matthall.gallery',
   description: 'Photography portfolio by Matthew Hall',
   icons: {
     icon: '/favicon.ico',

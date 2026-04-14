@@ -17,72 +17,9 @@ const navigation = [
     { name: 'By Date', href: '#', value: 'by-date' }
 ]
 
-export default function Header({ onTagClick, slug = null }) {
+export default function Header({ onTagClick, filters = { tags: [], people: [], cameras: [], lenses: [] } }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-    const [tags, setTags] = useState([])
-    const [people, setPeople] = useState([])
-    const [cameras, setCameras] = useState([])
-    const [lenses, setLenses] = useState([])
-
-    useEffect(() => {
-        const loadFilters = async () => {
-            try {
-                const url = slug ? `/api/images?slug=${slug}` : '/api/images';
-                const response = await fetch(url);
-                const data = await response.json();
-                console.log("Fetched images:", data);
-
-                const rows = data.results || [];
-
-                // Extract tags
-                const tagSet = new Set();
-                rows.forEach(row => {
-                    const tags = (row.tags || "").split(",").map(t => t.trim());
-                    tags.forEach(tag => tag && tagSet.add(tag));
-                });
-
-                // Extract people
-                const peopleSet = new Set();
-                rows.forEach(row => {
-                    const people = (row.people || "").split(",").map(p => p.trim());
-                    people.forEach(person => person && peopleSet.add(person));
-                });
-
-                // Extract cameras (combine camera_make + camera)
-                const cameraSet = new Set();
-                rows.forEach(row => {
-                    const cameraMake = (row.camera_make || "").trim();
-                    const camera = (row.camera || "").trim();
-                    if (cameraMake && camera) {
-                        cameraSet.add(`${cameraMake} ${camera}`);
-                    } else if (camera) {
-                        cameraSet.add(camera);
-                    }
-                });
-
-                // Extract lenses (combine lens_make + lens)
-                const lensSet = new Set();
-                rows.forEach(row => {
-                    const lensMake = (row.lens_make || "").trim();
-                    const lens = (row.lens || "").trim();
-                    if (lensMake && lens) {
-                        lensSet.add(`${lensMake} ${lens}`);
-                    } else if (lens) {
-                        lensSet.add(lens);
-                    }
-                });
-
-                setTags(Array.from(tagSet).sort().map(tag => ({ name: tag })));
-                setPeople(Array.from(peopleSet).sort().map(person => ({ name: person })));
-                setCameras(Array.from(cameraSet).sort().map(camera => ({ name: camera })));
-                setLenses(Array.from(lensSet).sort().map(lens => ({ name: lens })));
-            } catch (error) {
-                console.error("Error loading filters from API:", error);
-            }
-        };
-
-        loadFilters();
-    }, [slug]);
+    const { tags, people, cameras, lenses } = filters;
 
     return (
         <header>
