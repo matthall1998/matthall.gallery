@@ -1,6 +1,8 @@
 import GalleryPage from "@/components/GalleryPage";
 import { getImages, extractFilters } from "@/lib/getImages";
 
+export const dynamic = 'force-dynamic';
+
 // Helper to format slug into a title
 function formatSlugToTitle(slug) {
   return slug
