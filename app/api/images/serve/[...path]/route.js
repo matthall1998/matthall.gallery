@@ -64,8 +64,7 @@ export async function GET(request, { params }) {
     // Read the file
     const fileBuffer = await fs.readFile(fullPath);
     
-    // Determine content type based on extension
-    const ext = path.extname(filePath).toLowerCase();
+    // Determine content type based on extension (ext already defined above)
     const contentTypeMap = {
       '.jpg': 'image/jpeg',
       '.jpeg': 'image/jpeg',
