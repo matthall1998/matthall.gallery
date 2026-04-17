@@ -106,6 +106,7 @@ export default function GalleryPage({ slug = null, initialImages = [], filters =
       setShuffleKey((prev) => prev + 1);
     } else {
       setSelectedTag(tag);
+      setShuffleKey(0); // Reset shuffle when selecting a sort option
     }
   };
 

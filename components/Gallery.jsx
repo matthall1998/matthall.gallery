@@ -8,13 +8,25 @@ import "photoswipe/style.css";
 
 const Gallery = ({ images }) => {
   const lightboxRef = useRef(null);
-
   useEffect(() => {
     import('photoswipe/lightbox').then((mod) => {
       const PhotoSwipeLightbox = mod.default;
+      
+      // Use dataSource array approach instead of DOM order
+      // This ensures slides navigate in array order, not visual masonry order
       const lightbox = new PhotoSwipeLightbox({
-        gallery: '#gallery-container',
-        children: 'a',
+        dataSource: images.map((img, idx) => ({
+          src: img.src,
+          width: img.width,
+          height: img.height,
+          camera: img.camera,
+          lens: img.lens,
+          iso: img.iso,
+          shutter: img.shutter,
+          aperture: img.aperture,
+          msrc: img.srcThumbnail,
+          originalIndex: idx
+        })),
         pswpModule: () => import('photoswipe'),
         bgOpacity: 1,
         hideAnimationDuration: 200,
@@ -24,6 +36,18 @@ const Gallery = ({ images }) => {
         maxZoomLevel: (z) => Math.min(1, z.fit * 2),
         paddingFn: () => ({ top: 30, bottom: 30, left: 0, right: 0 }),
       });
+
+      // Link dataSource items to their thumbnail elements for zoom animation
+      lightbox.addFilter('thumbEl', (thumbEl, data) => {
+        const el = document.querySelector(`#gallery-container a[data-index="${data.originalIndex}"]`);
+        return el || thumbEl;
+      });
+
+      // Use thumbnail as placeholder
+      lightbox.addFilter('placeholderSrc', (placeholderSrc, slide) => {
+        return slide.data.msrc || placeholderSrc;
+      });
+
 
       lightbox.on('uiRegister', function() {
         lightbox.pswp.ui.registerElement({
@@ -35,14 +59,14 @@ const Gallery = ({ images }) => {
           onInit: (el) => {
             el.style.cssText = 'position: absolute; left: 0; right: 0; bottom: 0; width: 100%; background: rgba(0, 0, 0, 0.75); padding: 20px 16px; text-align: center; color: white;';
             lightbox.pswp.on('change', () => {
-              const currSlideElement = lightbox.pswp.currSlide?.data?.element;
+              const currSlide = lightbox.pswp.currSlide;
               let captionHTML = '';
-              if (currSlideElement) {
-                const camera = currSlideElement.dataset.camera || '';
-                const lens = currSlideElement.dataset.lens || '';
-                const iso = currSlideElement.dataset.iso || '';
-                const shutter = currSlideElement.dataset.shutter || '';
-                const aperture = currSlideElement.dataset.aperture || '';
+              if (currSlide?.data) {
+                const camera = currSlide.data.camera || '';
+                const lens = currSlide.data.lens || '';
+                const iso = currSlide.data.iso || '';
+                const shutter = currSlide.data.shutter || '';
+                const aperture = currSlide.data.aperture || '';
                 const gear = [camera, lens].filter(Boolean).join(' • ');
                 const exif = [
                   iso ? `ISO ${iso.replace(/^ISO\s*/i, '')}` : '',
@@ -59,6 +83,19 @@ const Gallery = ({ images }) => {
         });
       });
 
+      // Handle clicks on gallery images
+      const galleryContainer = document.querySelector('#gallery-container');
+      if (galleryContainer) {
+        galleryContainer.addEventListener('click', (e) => {
+          const link = e.target.closest('a[data-index]');
+          if (link) {
+            e.preventDefault();
+            const index = parseInt(link.dataset.index, 10);
+            lightbox.loadAndOpen(index);
+          }
+        });
+      }
+
       lightbox.init();
       lightboxRef.current = lightbox;
     });
@@ -69,26 +106,22 @@ const Gallery = ({ images }) => {
         lightboxRef.current = null;
       }
     };
-  }, []);
+  }, [images]);
 
   return (
     <div id="gallery-container" className="mx-auto 2xl:w-5/6 pl-3 pr-3">
       <ResponsiveMasonry columnsCountBreakPoints={{ 350: 2, 750: 4, 900: 4 }}>
-        <Masonry sequential={true} gutter="10px">
+        <Masonry>
           {images.map((image, i) => (
             <a
               key={i}
               href={image.src}
+              data-index={i}
               data-pswp-width={image.width}
               data-pswp-height={image.height}
-              data-caption={image.title || ""}
-              data-camera={image.camera || ""}
-              data-lens={image.lens || ""}
-              data-iso={image.iso || ""}
-              data-shutter={image.shutter || ""}
-              data-aperture={image.aperture || ""}
               target="_blank"
               rel="noreferrer"
+              style={{ display: "block", lineHeight: 0 }}
             >
               <LazyLoadImage
                 src={image.srcThumbnail}
