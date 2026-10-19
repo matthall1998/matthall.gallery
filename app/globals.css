@@ -26,6 +26,16 @@ body {
   flex: 1;
 }
 
+#gallery-container.gallery-transition .lazy-load-image-background {
+  filter: none;
+  transition: none;
+}
+
+#gallery-container.gallery-transition .lazy-load-image-background > img {
+  opacity: 1;
+  transition: none;
+}
+
 footer {
   /* background-color: #333; 
   color: #fff;

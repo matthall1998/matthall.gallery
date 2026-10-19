@@ -65,6 +65,8 @@ Example JSON metadata:
   "albums": "Portfolio 2026",
   "website": true,
   "private_link": false,
+  "image_width": 6000,
+  "image_height": 4000,
   "shot_date": "2026-04-05",
   "export_date": "2026-04-06"
 }
@@ -126,6 +128,8 @@ gallery-nextjs/
 - Images served through `/api/images/serve/[...path]` route (not directly from `/public`)
 - Metadata read from `.json` files at runtime (no database needed)
 - API route provides security (path validation) and proper caching headers
+- Include positive `image_width` and `image_height` pixel dimensions in each metadata file. Thumbnails must preserve the original aspect ratio so placeholders reserve the correct space before images load.
+- The first two thumbnails load eagerly, with high fetch priority on the first. Remaining thumbnails load when within 100px of the viewport; the gallery reserves their space to avoid fetching off-screen images immediately.
 
 ### Content Structure  
 - Home page shows images where `"website": true`
@@ -137,6 +141,9 @@ gallery-nextjs/
   - **Latest**: Orders by `export_date` (when you exported/processed the photo)
   - **By Date**: Orders by `shot_date` (when you actually took the photo)
   - **Shuffle**: Random order on each click
+- Filtering, sorting, and shuffling use the metadata loaded with the page without refetching it or replacing the gallery with a spinner. Shuffle preserves the active filter; choosing a filter or sort resets the shuffle.
+- After a selection or order change, visible thumbnails finish loading and decoding before revealing together in a 300ms gallery fade, including images that stay in place. Per-image fades are suppressed during this transition, off-screen images remain lazy-loaded, and visitors who prefer reduced motion skip the synchronized fade.
+- Reload the page to pick up newly uploaded images or metadata changes.
 
 ## Deployment
 
@@ -177,4 +184,3 @@ No environment variables needed - images always in `/data/images`
 ## License
 
 © 2025 Matthew Hall. All Rights Reserved.
-

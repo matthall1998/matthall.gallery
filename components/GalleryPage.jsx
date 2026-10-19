@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import dynamic from "next/dynamic";
-import Spinner from "@/components/Spinner";
 
 // Gallery uses react-responsive-masonry and LazyLoadImage which both depend on
 // browser APIs (window.innerWidth, IntersectionObserver). SSR produces different
 // HTML than the client, causing hydration errors. Render client-only.
 const Gallery = dynamic(() => import("@/components/Gallery"), { ssr: false });
 
-// Pure function to process images - outside component to avoid hydration issues
 function processImages(rows, selectedTag = null, shuffleKey = 0) {
   let filteredData;
   if (selectedTag === "latest") {
@@ -53,7 +51,10 @@ function processImages(rows, selectedTag = null, shuffleKey = 0) {
 
   // Apply shuffle on top of whatever filter is active
   if (shuffleKey > 0) {
-    filteredData = [...filteredData].sort(() => Math.random() - 0.5);
+    for (let i = filteredData.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [filteredData[i], filteredData[j]] = [filteredData[j], filteredData[i]];
+    }
   }
 
   return filteredData.map((item) => ({
@@ -74,31 +75,13 @@ function processImages(rows, selectedTag = null, shuffleKey = 0) {
   }));
 }
 
-export default function GalleryPage({ slug = null, initialImages = [], filters = { tags: [], people: [], cameras: [], lenses: [] } }) {
-  const [images, setImages] = useState(() => processImages(initialImages));
-  const [loading, setLoading] = useState(false);
+export default function GalleryPage({ initialImages = [], filters = { tags: [], people: [], cameras: [], lenses: [] } }) {
   const [selectedTag, setSelectedTag] = useState(null);
   const [shuffleKey, setShuffleKey] = useState(0);
-
-  // Fetch fresh data when filters change
-  useEffect(() => {
-    if (selectedTag || shuffleKey > 0) {
-      const loadImages = async () => {
-        setLoading(true);
-        try {
-          const url = slug ? `/api/images?slug=${slug}` : '/api/images';
-          const response = await fetch(url);
-          const data = await response.json();
-          setImages(processImages(data.results, selectedTag, shuffleKey));
-        } catch (error) {
-          console.error("Error loading images:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadImages();
-    }
-  }, [selectedTag, shuffleKey, slug]);
+  const images = useMemo(
+    () => processImages(initialImages, selectedTag, shuffleKey),
+    [initialImages, selectedTag, shuffleKey]
+  );
 
   const handleTagClick = (tag) => {
     if (tag === "shuffle") {
@@ -114,7 +97,7 @@ export default function GalleryPage({ slug = null, initialImages = [], filters =
     <div className="page-container">
       <Header filters={filters} onTagClick={handleTagClick} />
       <main className="content-wrap">
-        {loading ? <Spinner /> : <Gallery images={images} />}
+        <Gallery images={images} />
       </main>
       <Footer />
     </div>

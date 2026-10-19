@@ -25,5 +25,5 @@ export default async function AlbumPage({ params }) {
   const initialImages = await getImages(params.slug);
   const filters = extractFilters(initialImages);
   
-  return <GalleryPage slug={params.slug} initialImages={initialImages} filters={filters} />;
+  return <GalleryPage key={params.slug} initialImages={initialImages} filters={filters} />;
 }
