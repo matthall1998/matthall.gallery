@@ -9,6 +9,7 @@ A photography portfolio site built with Next.js, featuring a responsive masonry 
 - 🏷️ Smart filtering system:
   - **Filter** dropdown: People and tags
   - **Gear** dropdown: Cameras and lenses
+    - Lens labels use a softer gray to distinguish them from cameras.
 - 🔀 Multiple sorting options:
   - **Latest**: Sorted by export date (newest exports first)
   - **By Date**: Sorted by shot date (when photo was taken)
@@ -166,7 +167,7 @@ This app requires a Node.js runtime and works with:
 
 **Why this works:**
 - Same `/data/images` path works locally and in production
-- No environment variables needed
+- No environment variables needed for image storage
 - SFTP/rsync directly to persistent storage
 - Images survive container rebuilds
 
@@ -179,7 +180,28 @@ These platforms don't support persistent file storage. Two options:
 
 ## Environment Variables
 
-No environment variables needed - images always in `/data/images`
+Images always use `/data/images` and need no environment variables.
+
+### Analytics (Optional)
+
+Copy `.env.example` to `.env.local` for local development, or set these variables
+in your deployment platform (for example, Coolify):
+
+```dotenv
+NEXT_PUBLIC_UMAMI_SCRIPT_URL=
+NEXT_PUBLIC_UMAMI_WEBSITE_ID=
+NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=
+```
+
+For Umami, enter your script URL and website ID; both must be set to load tracking
+on all pages. For Google Analytics, enter your GA4 measurement ID (such as
+`G-XXXXXXXXXX`). Each provider is enabled independently. Leave values empty or
+unset to disable that provider. The shared example intentionally contains no
+tracking IDs, so copying it does not enable analytics.
+
+These values are public, not secrets. Next.js embeds `NEXT_PUBLIC_` values at
+build time, so make them available during the build and rebuild/redeploy after
+changing them. Restart the development server after changing `.env.local`.
 
 ## License
 

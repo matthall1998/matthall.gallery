@@ -102,7 +102,7 @@ export default function Header({ onTagClick, filters = { tags: [], people: [], c
                                                 className="group flex items-center gap-x-6 rounded-lg p-2 text-sm hover:bg-gray-50 cursor-pointer"
                                                 onClick={() => onTagClick(item.name)}
                                             >
-                                                <span className="block font-semibold text-gray-900">{item.name}</span>
+                                                <span className="block font-semibold text-gray-500">{item.name}</span>
                                             </Popover.Button>
                                         ))}
                                     </div>
@@ -165,11 +165,11 @@ export default function Header({ onTagClick, filters = { tags: [], people: [], c
                                 href="#"
                                 className="text-sm font-semibold text-white"
                                 onClick={() => {
-                                    onTagClick("latest");
+                                    onTagClick("by-date");
                                     setMobileMenuOpen(false);
                                 }}
                             >
-                                Latest
+                                By Date
                             </a>
                         </div>
                     </div>
@@ -218,7 +218,7 @@ export default function Header({ onTagClick, filters = { tags: [], people: [], c
                             <a
                                 key={item.name}
                                 href="#"
-                                className="rounded-lg px-3 py-2 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700"
+                                className="rounded-lg px-3 py-2 text-base font-semibold text-gray-300 bg-gray-800 hover:bg-gray-900"
                                 onClick={() => {
                                     onTagClick(item.name);
                                     setMobileMenuOpen(false);
