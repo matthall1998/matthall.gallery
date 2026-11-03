@@ -166,7 +166,7 @@ const Gallery = ({ images }) => {
             el.style.cssText = 'position: absolute; left: 0; right: 0; bottom: 0; width: 100%; background: rgba(0, 0, 0, 0.75); padding: 20px 16px; text-align: center; color: white;';
             lightbox.pswp.on('change', () => {
               const currSlide = lightbox.pswp.currSlide;
-              let captionHTML = '';
+              el.replaceChildren();
               if (currSlide?.data) {
                 const camera = currSlide.data.camera || '';
                 const lens = currSlide.data.lens || '';
@@ -179,11 +179,18 @@ const Gallery = ({ images }) => {
                   shutter,
                   aperture
                 ].filter(Boolean).join(' • ');
-                if (gear) captionHTML += `<div style="font-size: 18px; margin-bottom: 4px;">${gear}</div>`;
-                if (exif) captionHTML += `<div style="font-size: 14px; color: #ccc;">${exif}</div>`;
+                for (const [text, style] of [
+                  [gear, 'font-size: 18px; margin-bottom: 4px;'],
+                  [exif, 'font-size: 14px; color: #ccc;'],
+                ]) {
+                  if (!text) continue;
+                  const line = document.createElement('div');
+                  line.style.cssText = style;
+                  line.textContent = text;
+                  el.appendChild(line);
+                }
               }
-              el.innerHTML = captionHTML || '';
-              el.style.display = captionHTML ? 'block' : 'none';
+              el.style.display = el.childElementCount ? 'block' : 'none';
             });
           }
         });
@@ -216,9 +223,10 @@ const Gallery = ({ images }) => {
         <Masonry>
           {images.map((image, i) => (
             <a
-              key={image.src}
+              key={image.id}
               href={image.src}
               data-index={i}
+              data-photo-id={image.id}
               data-pswp-width={image.width}
               data-pswp-height={image.height}
               target="_blank"

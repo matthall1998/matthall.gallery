@@ -1,29 +1,31 @@
 import GalleryPage from "@/components/GalleryPage";
-import { getImages, extractFilters } from "@/lib/getImages";
+import { getGallery, extractFilters } from "@/lib/getImages";
+import { cache } from "react";
+import { notFound } from "next/navigation";
 
 export const dynamic = 'force-dynamic';
 
-// Helper to format slug into a title
-function formatSlugToTitle(slug) {
-  return slug
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
+// Share one catalog snapshot between metadata and content within a request.
+const readAlbum = cache(async (slug) => {
+  const gallery = await getGallery(slug);
+  if (!gallery) notFound();
+  return gallery;
+});
 
 // Generate metadata for each album page
 export async function generateMetadata({ params }) {
-  const albumTitle = formatSlugToTitle(params.slug);
+  const { album } = await readAlbum(params.slug);
   
   return {
-    title: `${albumTitle} - matthall.gallery`,
-    description: `Photo album: ${albumTitle}`,
+    title: `${album.name} - matthall.gallery`,
+    description: `Photo album: ${album.name}`,
   };
 }
 
 export default async function AlbumPage({ params }) {
-  const initialImages = await getImages(params.slug);
-  const filters = extractFilters(initialImages);
+  const gallery = await readAlbum(params.slug);
+  const filters = extractFilters(gallery.images);
   
-  return <GalleryPage key={params.slug} initialImages={initialImages} filters={filters} />;
+  return <GalleryPage key={`${params.slug}:${gallery.generatedAt}`}
+    initialImages={gallery.images} filters={filters} album={gallery.album} />;
 }

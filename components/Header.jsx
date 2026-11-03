@@ -17,7 +17,7 @@ const navigation = [
     { name: 'By Date', href: '#', value: 'by-date' }
 ]
 
-export default function Header({ onTagClick, filters = { tags: [], people: [], cameras: [], lenses: [] } }) {
+export default function Header({ onTagClick, onFilterClick, filters = { tags: [], people: [], cameras: [], lenses: [] } }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const { tags, people, cameras, lenses } = filters;
 
@@ -59,7 +59,7 @@ export default function Header({ onTagClick, filters = { tags: [], people: [], c
                                             <Popover.Button
                                                 key={item.name}
                                                 className="group flex items-center gap-x-6 rounded-lg p-2 text-sm hover:bg-gray-50 cursor-pointer"
-                                                onClick={() => onTagClick(item.name)}
+                                                onClick={() => onFilterClick(item.name)}
                                             >
                                                 <span className="block font-semibold text-gray-900">{item.name}</span>
                                             </Popover.Button>
@@ -68,7 +68,7 @@ export default function Header({ onTagClick, filters = { tags: [], people: [], c
                                             <Popover.Button
                                                 key={item.name}
                                                 className="group flex items-center gap-x-6 rounded-lg p-2 text-sm hover:bg-gray-50 cursor-pointer"
-                                                onClick={() => onTagClick(item.name)}
+                                                onClick={() => onFilterClick(item.name)}
                                             >
                                                 <span className="block font-semibold text-gray-900">{item.name}</span>
                                             </Popover.Button>
@@ -91,7 +91,7 @@ export default function Header({ onTagClick, filters = { tags: [], people: [], c
                                             <Popover.Button
                                                 key={item.name}
                                                 className="group flex items-center gap-x-6 rounded-lg p-2 text-sm hover:bg-gray-50 cursor-pointer"
-                                                onClick={() => onTagClick(item.name)}
+                                                onClick={() => onFilterClick(item.name)}
                                             >
                                                 <span className="block font-semibold text-gray-900">{item.name}</span>
                                             </Popover.Button>
@@ -100,7 +100,7 @@ export default function Header({ onTagClick, filters = { tags: [], people: [], c
                                             <Popover.Button
                                                 key={item.name}
                                                 className="group flex items-center gap-x-6 rounded-lg p-2 text-sm hover:bg-gray-50 cursor-pointer"
-                                                onClick={() => onTagClick(item.name)}
+                                                onClick={() => onFilterClick(item.name)}
                                             >
                                                 <span className="block font-semibold text-gray-500">{item.name}</span>
                                             </Popover.Button>
@@ -181,7 +181,7 @@ export default function Header({ onTagClick, filters = { tags: [], people: [], c
                                 href="#"
                                 className="rounded-lg px-3 py-2 text-base font-semibold text-white bg-gray-800 hover:bg-gray-900"
                                 onClick={() => {
-                                    onTagClick(item.name);
+                                    onFilterClick(item.name);
                                     setMobileMenuOpen(false);
                                 }}
                             >
@@ -194,7 +194,7 @@ export default function Header({ onTagClick, filters = { tags: [], people: [], c
                                 href="#"
                                 className="rounded-lg px-3 py-2 text-base font-semibold text-white bg-gray-800 hover:bg-gray-900"
                                 onClick={() => {
-                                    onTagClick(item.name);
+                                    onFilterClick(item.name);
                                     setMobileMenuOpen(false);
                                 }}
                             >
@@ -207,7 +207,7 @@ export default function Header({ onTagClick, filters = { tags: [], people: [], c
                                 href="#"
                                 className="rounded-lg px-3 py-2 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700"
                                 onClick={() => {
-                                    onTagClick(item.name);
+                                    onFilterClick(item.name);
                                     setMobileMenuOpen(false);
                                 }}
                             >
@@ -220,7 +220,7 @@ export default function Header({ onTagClick, filters = { tags: [], people: [], c
                                 href="#"
                                 className="rounded-lg px-3 py-2 text-base font-semibold text-gray-300 bg-gray-800 hover:bg-gray-900"
                                 onClick={() => {
-                                    onTagClick(item.name);
+                                    onFilterClick(item.name);
                                     setMobileMenuOpen(false);
                                 }}
                             >

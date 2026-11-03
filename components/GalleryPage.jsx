@@ -4,100 +4,32 @@ import { useState, useMemo } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import dynamic from "next/dynamic";
+import { filterImages, initialImageOrder, shuffleImages, sortImages, toGalleryImage } from "@/lib/galleryImages.mjs";
 
-// Gallery uses react-responsive-masonry and LazyLoadImage which both depend on
-// browser APIs (window.innerWidth, IntersectionObserver). SSR produces different
-// HTML than the client, causing hydration errors. Render client-only.
+// Masonry and lazy loading depend on browser APIs, so render the grid client-only.
 const Gallery = dynamic(() => import("@/components/Gallery"), { ssr: false });
 
-function processImages(rows, selectedTag = null, shuffleKey = 0) {
-  let filteredData;
-  if (selectedTag === "latest") {
-    filteredData = [...rows].sort(
-      (a, b) => new Date(b.export_date) - new Date(a.export_date)
-    );
-  } else if (selectedTag === "by-date") {
-    filteredData = [...rows].sort(
-      (a, b) => new Date(b.shot_date) - new Date(a.shot_date)
-    );
-  } else if (selectedTag) {
-    const sorted = [...rows].sort(
-      (a, b) => new Date(b.export_date) - new Date(a.export_date)
-    );
-    filteredData = sorted.filter((item) => {
-      const tags = (item.tags || "").split(",").map(t => t.trim());
-      if (tags.includes(selectedTag)) return true;
-      
-      const people = (item.people || "").split(",").map(p => p.trim());
-      if (people.includes(selectedTag)) return true;
-      
-      const cameraMake = (item.camera_make || "").trim();
-      const camera = (item.camera || "").trim();
-      const fullCamera = cameraMake && camera ? `${cameraMake} ${camera}` : camera;
-      if (fullCamera === selectedTag) return true;
-      
-      const lensMake = (item.lens_make || "").trim();
-      const lens = (item.lens || "").trim();
-      const fullLens = lensMake && lens ? `${lensMake} ${lens}` : lens;
-      if (fullLens === selectedTag) return true;
-      
-      return false;
-    });
-  } else {
-    filteredData = [...rows].sort(
-      (a, b) => new Date(b.export_date) - new Date(a.export_date)
-    );
-  }
+export default function GalleryPage({ initialImages = [], filters = { tags: [], people: [], cameras: [], lenses: [] }, album = null }) {
+  const [rows, setRows] = useState(() => initialImageOrder(initialImages, album?.load_random));
+  const images = useMemo(() => rows.map(toGalleryImage), [rows]);
 
-  // Apply shuffle on top of whatever filter is active
-  if (shuffleKey > 0) {
-    for (let i = filteredData.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [filteredData[i], filteredData[j]] = [filteredData[j], filteredData[i]];
-    }
-  }
-
-  return filteredData.map((item) => ({
-    src: item.src,
-    srcThumbnail: item.srcOptimized || item.src,
-    width: item.image_width,
-    height: item.image_height,
-    title: item.caption || "",
-    camera: item.camera_make && item.camera ? `${item.camera_make} ${item.camera}` : item.camera || "",
-    lens: item.lens_make && item.lens ? `${item.lens_make} ${item.lens}` : item.lens || "",
-    iso: item.iso || "",
-    shutter: item.shutter || "",
-    aperture: item.aperture || "",
-    description: [
-      item.camera_make && item.camera ? `${item.camera_make} ${item.camera}` : item.camera,
-      item.lens_make && item.lens ? `${item.lens_make} ${item.lens}` : item.lens
-    ].filter(Boolean).join(" • ") || "",
-  }));
-}
-
-export default function GalleryPage({ initialImages = [], filters = { tags: [], people: [], cameras: [], lenses: [] } }) {
-  const [selectedTag, setSelectedTag] = useState(null);
-  const [shuffleKey, setShuffleKey] = useState(0);
-  const images = useMemo(
-    () => processImages(initialImages, selectedTag, shuffleKey),
-    [initialImages, selectedTag, shuffleKey]
-  );
-
-  const handleTagClick = (tag) => {
-    if (tag === "shuffle") {
-      // Shuffle the current view without changing the active filter
-      setShuffleKey((prev) => prev + 1);
-    } else {
-      setSelectedTag(tag);
-      setShuffleKey(0); // Reset shuffle when selecting a sort option
-    }
+  const handleSort = (option) => {
+    setRows(current => option === "shuffle"
+      ? shuffleImages(current)
+      : sortImages(initialImages, option === "by-date" ? "shot_date" : "export_date"));
   };
 
   return (
     <div className="page-container">
-      <Header filters={filters} onTagClick={handleTagClick} />
+      <Header filters={filters} onTagClick={handleSort}
+        onFilterClick={value => setRows(filterImages(initialImages, value))} />
       <main className="content-wrap">
-        <Gallery images={images} />
+        {album && <h1 className="sr-only">{album.name}</h1>}
+        {images.length > 0 ? <Gallery images={images} /> : (
+          <p className="p-6 text-center text-gray-400">
+            {album ? "This album has no photos yet." : "No photos to display yet."}
+          </p>
+        )}
       </main>
       <Footer />
     </div>
