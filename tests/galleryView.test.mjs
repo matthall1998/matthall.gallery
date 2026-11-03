@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { galleryViewImages, readGalleryView, updateGalleryQuery } from '../lib/galleryView.mjs';
-import { sortImages } from '../lib/galleryImages.mjs';
+import { extractFilters, matchesImageFilter, sortImages } from '../lib/galleryImages.mjs';
 
 const images = [
   { id: 'a', export_date: '2026-01-03', shot_date: '', tags: ['Landscape', 'Name, with comma'], people: [], camera_make: 'Canon', camera: 'R5', lens_make: '', lens: '' },
@@ -28,6 +28,40 @@ test('metadata and gear filters are separate exact matches and combine with AND'
   assert.deepEqual(select('filter=Name'), []);
   assert.deepEqual(select('gear=Unknown'), []);
   assert.deepEqual(select('filter=Landscape&gear=Unknown'), []);
+});
+
+test('dropdown options contain only values from currently matching photos', () => {
+  const query = 'filter=Landscape&gear=Sony+A7';
+  const rows = select(query);
+  const filters = extractFilters(rows);
+  assert.deepEqual(filters, {
+    tags: [{ name: 'Landscape' }],
+    people: [{ name: 'Name, with comma' }],
+    cameras: [{ name: 'Sony A7' }],
+    lenses: [{ name: 'Canon R5' }],
+  });
+  for (const [category, options] of Object.entries(filters)) {
+    for (const option of options) {
+      const kind = category === 'tags' || category === 'people' ? 'filter' : 'gear';
+      assert.ok(rows.some(image => matchesImageFilter(image, option.name, kind)));
+    }
+  }
+  assert.deepEqual(extractFilters(select('filter=Canon+R5')).lenses, []);
+  assert.deepEqual(extractFilters(select('gear=Unknown')), {
+    tags: [], people: [], cameras: [], lenses: [],
+  });
+});
+
+test('clearing filters restores all dropdown options without changing the selected sort', () => {
+  const initial = new URLSearchParams('sort=shuffle&seed=options&filter=Canon+R5&gear=Sony+A7');
+  const restricted = extractFilters(select(initial.toString()));
+  assert.deepEqual(restricted.cameras, [{ name: 'Sony A7' }]);
+  assert.deepEqual(restricted.tags, [{ name: 'Canon R5' }]);
+  const cleared = updateGalleryQuery(initial, { filter: null, gear: null });
+  assert.equal(view(cleared).sort, 'shuffle');
+  assert.equal(view(cleared).seed, 'options');
+  assert.deepEqual(extractFilters(select(cleared)), extractFilters(images));
+  assert.deepEqual(extractFilters(select('sort=bydate&filter=Canon+R5&gear=Sony+A7')), restricted);
 });
 
 test('seeded shuffle is deterministic, independent of input order, and does not mutate data', () => {

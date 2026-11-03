@@ -37,6 +37,9 @@ Sorting and filters are stored in the URL on both the homepage and album pages:
   When both are present, photos must match both. Values containing commas remain
   whole. Selecting an active value again removes it; **Clear filters** removes
   both without changing the order.
+- While filters are active, both dropdowns show only values present in the
+  matching photos. Options with zero matching photos are hidden on desktop and
+  mobile. **Clear filters** restores the full set of options for the current page.
 - Changing sort preserves filters. Every Shuffle click creates a new `seed`;
   the same seed reproduces the order for the same catalog. Without a seed,
   explicit shuffle uses a stable default seed.
@@ -316,6 +319,22 @@ on all pages. For Google Analytics, enter your GA4 measurement ID (such as
 `G-XXXXXXXXXX`). Each provider is enabled independently. Leave values empty or
 unset to disable that provider. The shared example intentionally contains no
 tracking IDs, so copying it does not enable analytics.
+
+When Umami is loaded, gallery controls also send these custom events:
+
+| Event | Data |
+| --- | --- |
+| `gallery-sort` | `sort`: `latest`, `bydate`, or `shuffle` |
+| `gallery-filter` | Exact tag/person `value` and `action`: `apply` or `remove` |
+| `gallery-gear` | Exact camera/lens `value` and `action`: `apply` or `remove` |
+| `gallery-clear-filters` | Previously selected `filter` and `gear` |
+
+Every event includes `album` (the album slug, or `home` on the homepage).
+Desktop and mobile controls, including the Latest logo button, share the same
+tracking handlers. Only clicks send custom events; reloads, initial URL filters,
+and Back/Forward do not. In Umami, open **Events** and select an event to inspect
+its values. Tracking is optional: blocked or unloaded Umami does not prevent
+gallery controls from working. These custom events are not sent to Google Analytics.
 
 These values are public, not secrets. Next.js embeds `NEXT_PUBLIC_` values at
 build time, so make them available during the build and rebuild/redeploy after
