@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import {
     Dialog,
@@ -13,11 +13,11 @@ import {
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 
 const navigation = [
-    { name: 'Latest', href: '#', value: 'latest' },
-    { name: 'By Date', href: '#', value: 'by-date' }
+    { name: 'Latest', value: 'latest' },
+    { name: 'By Date', value: 'bydate' }
 ]
 
-export default function Header({ onTagClick, onFilterClick, filters = { tags: [], people: [], cameras: [], lenses: [] } }) {
+export default function Header({ onTagClick, onFilterClick, onGearClick, filters = { tags: [], people: [], cameras: [], lenses: [] } }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const { tags, people, cameras, lenses } = filters;
 
@@ -91,7 +91,7 @@ export default function Header({ onTagClick, onFilterClick, filters = { tags: []
                                             <Popover.Button
                                                 key={item.name}
                                                 className="group flex items-center gap-x-6 rounded-lg p-2 text-sm hover:bg-gray-50 cursor-pointer"
-                                                onClick={() => onFilterClick(item.name)}
+                                                onClick={() => onGearClick(item.name)}
                                             >
                                                 <span className="block font-semibold text-gray-900">{item.name}</span>
                                             </Popover.Button>
@@ -100,7 +100,7 @@ export default function Header({ onTagClick, onFilterClick, filters = { tags: []
                                             <Popover.Button
                                                 key={item.name}
                                                 className="group flex items-center gap-x-6 rounded-lg p-2 text-sm hover:bg-gray-50 cursor-pointer"
-                                                onClick={() => onFilterClick(item.name)}
+                                                onClick={() => onGearClick(item.name)}
                                             >
                                                 <span className="block font-semibold text-gray-500">{item.name}</span>
                                             </Popover.Button>
@@ -122,14 +122,13 @@ export default function Header({ onTagClick, onFilterClick, filters = { tags: []
                         </button>
                     </div>
                 </div>
-                <a href="#" className="-m-1.5 p-1.5">
+                <button aria-label="Latest" onClick={() => onTagClick("latest")} className="-m-1.5 p-1.5">
                     <img
                         alt=""
                         src="/logo.svg"
                         className="h-8 w-auto"
-                        onClick={() => onTagClick("latest")}
                     />
-                </a>
+                </button>
                 <div className="flex flex-1 justify-end">
                     <button
                         onClick={() => onTagClick("shuffle")}
@@ -152,33 +151,34 @@ export default function Header({ onTagClick, onFilterClick, filters = { tags: []
                             <XMarkIcon aria-hidden="true" className="h-6 w-6" />
                         </button>
                         <div className="absolute left-1/2 transform -translate-x-1/2">
-                            <a href="#" className="p-1.5">
+                            <button aria-label="Latest" className="p-1.5" onClick={() => {
+                                onTagClick("latest");
+                                setMobileMenuOpen(false);
+                            }}>
                                 <img
                                     alt="Logo"
                                     src="/logo.svg"
                                     className="h-8 w-auto"
                                 />
-                            </a>
+                            </button>
                         </div>
                         <div className="flex flex-1 justify-end">
-                            <a
-                                href="#"
+                            <button
                                 className="text-sm font-semibold text-white"
                                 onClick={() => {
-                                    onTagClick("by-date");
+                                    onTagClick("bydate");
                                     setMobileMenuOpen(false);
                                 }}
                             >
                                 By Date
-                            </a>
+                            </button>
                         </div>
                     </div>
 
                     <div className="mt-6 flex flex-wrap gap-2">
                         {people.map((item) => (
-                            <a
+                            <button
                                 key={item.name}
-                                href="#"
                                 className="rounded-lg px-3 py-2 text-base font-semibold text-white bg-gray-800 hover:bg-gray-900"
                                 onClick={() => {
                                     onFilterClick(item.name);
@@ -186,12 +186,11 @@ export default function Header({ onTagClick, onFilterClick, filters = { tags: []
                                 }}
                             >
                                 {item.name}
-                            </a>
+                            </button>
                         ))}
                         {tags.map((item) => (
-                            <a
+                            <button
                                 key={item.name}
-                                href="#"
                                 className="rounded-lg px-3 py-2 text-base font-semibold text-white bg-gray-800 hover:bg-gray-900"
                                 onClick={() => {
                                     onFilterClick(item.name);
@@ -199,33 +198,31 @@ export default function Header({ onTagClick, onFilterClick, filters = { tags: []
                                 }}
                             >
                                 {item.name}
-                            </a>
+                            </button>
                         ))}
                         {cameras.map((item) => (
-                            <a
+                            <button
                                 key={item.name}
-                                href="#"
                                 className="rounded-lg px-3 py-2 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700"
                                 onClick={() => {
-                                    onFilterClick(item.name);
+                                    onGearClick(item.name);
                                     setMobileMenuOpen(false);
                                 }}
                             >
                                 {item.name}
-                            </a>
+                            </button>
                         ))}
                         {lenses.map((item) => (
-                            <a
+                            <button
                                 key={item.name}
-                                href="#"
                                 className="rounded-lg px-3 py-2 text-base font-semibold text-gray-300 bg-gray-800 hover:bg-gray-900"
                                 onClick={() => {
-                                    onFilterClick(item.name);
+                                    onGearClick(item.name);
                                     setMobileMenuOpen(false);
                                 }}
                             >
                                 {item.name}
-                            </a>
+                            </button>
                         ))}
                     </div>
                 </DialogPanel>

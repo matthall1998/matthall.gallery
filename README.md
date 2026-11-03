@@ -20,6 +20,30 @@ A photography portfolio site built with Next.js, featuring a responsive masonry 
 - 🔗 Unlisted album URLs (not authenticated or password-protected)
 - 📁 File-system based - no database required
 
+## Shareable Gallery Views
+
+Sorting and filters are stored in the URL on both the homepage and album pages:
+
+```text
+/?sort=latest
+/?sort=bydate&filter=Landscape
+/travel?sort=shuffle&seed=example&gear=Canon%20EOS%20R5
+```
+
+- `sort`: `latest` (export date), `bydate` (shot date), or `shuffle`.
+  Missing or unrecognized values use the page's default order, including an
+  album's `load_random` setting.
+- `filter`: an exact tag or person value; `gear`: an exact camera or lens label.
+  When both are present, photos must match both. Values containing commas remain
+  whole. Selecting an active value again removes it; **Clear filters** removes
+  both without changing the order.
+- Changing sort preserves filters. Every Shuffle click creates a new `seed`;
+  the same seed reproduces the order for the same catalog. Without a seed,
+  explicit shuffle uses a stable default seed.
+- Refresh, sharing, and browser Back/Forward restore explicit URL selections
+  without full-page navigation. Parameter-free random albums shuffle once per
+  visit, not when filters change.
+
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router)

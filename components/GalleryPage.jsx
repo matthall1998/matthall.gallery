@@ -1,33 +1,53 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import dynamic from "next/dynamic";
-import { filterImages, initialImageOrder, shuffleImages, sortImages, toGalleryImage } from "@/lib/galleryImages.mjs";
+import { initialImageOrder, toGalleryImage } from "@/lib/galleryImages.mjs";
+import { galleryViewImages, readGalleryView, updateGalleryQuery } from "@/lib/galleryView.mjs";
 
 // Masonry and lazy loading depend on browser APIs, so render the grid client-only.
 const Gallery = dynamic(() => import("@/components/Gallery"), { ssr: false });
 
 export default function GalleryPage({ initialImages = [], filters = { tags: [], people: [], cameras: [], lenses: [] }, album = null }) {
-  const [rows, setRows] = useState(() => initialImageOrder(initialImages, album?.load_random));
-  const images = useMemo(() => rows.map(toGalleryImage), [rows]);
+  const params = useSearchParams();
+  const pathname = usePathname();
+  const [defaultOrder] = useState(() => initialImageOrder(initialImages, album?.load_random));
+  const view = useMemo(() => readGalleryView(params), [params]);
+  const images = useMemo(() =>
+    galleryViewImages(initialImages, defaultOrder, view).map(toGalleryImage),
+  [initialImages, defaultOrder, view]);
 
+  const updateView = (changes) => {
+    const query = updateGalleryQuery(new URLSearchParams(window.location.search), changes);
+    window.history.pushState(null, "", `${pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+  };
   const handleSort = (option) => {
-    setRows(current => option === "shuffle"
-      ? shuffleImages(current)
-      : sortImages(initialImages, option === "by-date" ? "shot_date" : "export_date"));
+    updateView({ sort: option, seed: option === "shuffle" ? crypto.randomUUID() : null });
   };
 
   return (
     <div className="page-container">
       <Header filters={filters} onTagClick={handleSort}
-        onFilterClick={value => setRows(filterImages(initialImages, value))} />
+        onFilterClick={value => updateView({ filter: view.filter === value ? null : value })}
+        onGearClick={value => updateView({ gear: view.gear === value ? null : value })} />
       <main className="content-wrap">
         {album && <h1 className="sr-only">{album.name}</h1>}
+        {(view.filter || view.gear) && (
+          <div className="flex flex-wrap items-center justify-center gap-3 p-4 text-sm text-gray-300">
+            {view.filter && <span>Filter: {view.filter}</span>}
+            {view.gear && <span>Gear: {view.gear}</span>}
+            <button className="underline" onClick={() => updateView({ filter: null, gear: null })}>
+              Clear filters
+            </button>
+          </div>
+        )}
         {images.length > 0 ? <Gallery images={images} /> : (
           <p className="p-6 text-center text-gray-400">
-            {album ? "This album has no photos yet." : "No photos to display yet."}
+            {view.filter || view.gear ? "No photos match these filters."
+              : album ? "This album has no photos yet." : "No photos to display yet."}
           </p>
         )}
       </main>
