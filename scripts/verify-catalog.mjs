@@ -21,7 +21,7 @@ async function main() {
     }
   }
   console.log(`Valid schema v1: ${manifest.photos.length} photos, ${manifest.albums.length} albums, ${assets.size} verified assets.`);
-  console.log(`Homepage: ${manifest.photos.filter(photo => photo.album_ids.length === 0).length} photos.`);
+  console.log(`Homepage: ${manifest.photos.filter(photo => photo.album_ids.length === 0 || photo.album_photo_in_main === true).length} photos.`);
   for (const album of manifest.albums) {
     const count = manifest.photos.filter(photo => photo.album_ids.includes(album.id)).length;
     console.log(`/${album.slug}: ${count} photos; initial ${album.load_random ? 'shuffle' : 'export-date order'}`);

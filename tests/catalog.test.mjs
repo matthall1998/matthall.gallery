@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import { getGallery, listLegacyAlbums, ManifestError, readManifest, validateManifest } from '../lib/galleryCatalog.mjs';
 import { extractFilters, filterImages, initialImageOrder, shuffleImages, sortImages, toGalleryImage } from '../lib/galleryImages.mjs';
 import { InvalidImagePathError, resolveImagePath, validateImagePath } from '../lib/imageAssets.mjs';
-import { catalogFixture, photo } from './fixtures/catalog.mjs';
+import { catalogFixture, featuredCatalogFixture, photo } from './fixtures/catalog.mjs';
 
 async function imageRoot(t, manifest = catalogFixture()) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'gallery-test-'));
@@ -30,7 +30,7 @@ async function legacyPhoto(directory, filename = 'same.jpg', metadata = {}) {
   }));
 }
 
-test('manifest is authoritative; homepage excludes every album photo', async t => {
+test('manifest is authoritative; homepage excludes unfeatured album photos', async t => {
   const directory = await imageRoot(t);
   await legacyPhoto(directory);
   await fs.writeFile(path.join(directory, 'unrelated.json'), 'broken JSON');
@@ -38,6 +38,78 @@ test('manifest is authoritative; homepage excludes every album photo', async t =
   assert.equal(gallery.source, 'manifest');
   assert.deepEqual(gallery.images.map(image => image.row_id), [1, 2]);
   assert.ok(gallery.images.every(image => image.album_ids.length === 0));
+});
+
+test('featured visibility preserves membership, identity and assets without duplicates', async t => {
+  const manifest = featuredCatalogFixture();
+  const directory = await imageRoot(t, manifest);
+  const home = await getGallery(null, directory);
+  const trip = await getGallery('trip', directory);
+  const favorites = await getGallery('favorites', directory);
+  assert.deepEqual(home.images.map(image => image.row_id), [1, 2, 3, 4, 7, 8, 9]);
+  assert.deepEqual(trip.images.map(image => image.row_id), [4, 5, 6, 7, 8]);
+  assert.deepEqual(favorites.images.map(image => image.row_id), [4, 9]);
+  const original = manifest.photos.find(image => image.row_id === 4);
+  for (const gallery of [home, trip, favorites]) {
+    assert.equal(new Set(gallery.images.map(image => image.id)).size, gallery.images.length);
+    const shared = gallery.images.filter(image => image.id === original.id);
+    assert.equal(shared.length, 1);
+    for (const field of ['id', 'file', 'optimized_file', 'album_ids', 'album_tags', 'album_photo_in_main']) {
+      assert.deepEqual(shared[0][field], original[field]);
+    }
+  }
+});
+
+test('effective tags are page-specific, preserve commas and never fall back or contaminate home', async t => {
+  const manifest = featuredCatalogFixture();
+  const snapshot = structuredClone(manifest);
+  assert.equal(validateManifest(manifest), manifest);
+  const directory = await imageRoot(t, manifest);
+  const home = await getGallery(null, directory);
+  const trip = await getGallery('trip', directory);
+  const favorites = await getGallery('favorites', directory);
+  const featured = gallery => gallery.images.find(image => image.row_id === 4);
+  assert.deepEqual(featured(home).tags, ['Nature']);
+  assert.deepEqual(featured(trip).tags, ['Day 2', 'Friends, family']);
+  assert.notEqual(featured(trip).tags, featured(trip).album_tags);
+  for (const gallery of [trip, favorites]) {
+    const filters = extractFilters(gallery.images).tags.map(tag => tag.name);
+    assert.ok(!filters.includes('Nature'));
+    assert.ok(filters.includes('Day 2'));
+    assert.ok(filters.includes('Friends, family'));
+    assert.equal(filterImages(gallery.images, 'Nature').length, 0);
+    assert.equal(filterImages(gallery.images, 'Friends').length, 0);
+    assert.deepEqual(filterImages(gallery.images, 'Friends, family').map(image => image.row_id), [4]);
+    assert.equal(filterImages(gallery.images, 'Person, with comma').length, gallery.images.length);
+    assert.equal(filterImages(gallery.images, 'Camera maker Model').length, gallery.images.length);
+    assert.equal(filterImages(gallery.images, 'Lens maker 35mm').length, gallery.images.length);
+  }
+  assert.deepEqual(filterImages(home.images, 'Nature').map(image => image.row_id), [4]);
+  for (const tag of ['Day 2', 'Friends, family', 'Album only']) {
+    assert.ok(!extractFilters(home.images).tags.some(item => item.name === tag));
+    assert.equal(filterImages(home.images, tag).length, 0);
+  }
+  for (const row of [6, 7, 8]) {
+    assert.deepEqual(trip.images.find(image => image.row_id === row).tags, []);
+  }
+  assert.deepEqual(home.images.find(image => image.row_id === 9).tags, []);
+  assert.deepEqual(favorites.images.find(image => image.row_id === 9).tags, ['Album only']);
+  featured(trip).tags.push('Mutated view');
+  assert.deepEqual(featured(trip).album_tags, ['Day 2', 'Friends, family']);
+  assert.deepEqual(await getGallery(null, directory), home);
+  assert.deepEqual(await readManifest(directory), snapshot);
+  assert.deepEqual(manifest, snapshot);
+});
+
+test('older v1 manifests default to unfeatured album photos and empty album tags', async t => {
+  const manifest = catalogFixture();
+  assert.equal(validateManifest(manifest), manifest);
+  const directory = await imageRoot(t, manifest);
+  assert.deepEqual((await getGallery(null, directory)).images.map(image => image.row_id), [1, 2]);
+  const trip = await getGallery('trip', directory);
+  assert.ok(trip.images.every(image => image.tags.length === 0));
+  assert.deepEqual(extractFilters(trip.images).tags, []);
+  assert.equal(filterImages(trip.images, 'Place, with comma').length, 0);
 });
 
 test('membership uses IDs; names, stored slugs, empty and unknown albums are distinct', async t => {
@@ -191,6 +263,14 @@ const invalidCases = [
   ['missing string', manifest => { delete manifest.photos[0].caption; }],
   ['people string', manifest => { manifest.photos[0].people = 'One, Two'; }],
   ['tags item type', manifest => { manifest.photos[0].tags = [1]; }],
+  ...[null, 'false', 0, [], {}].map(value => [
+    `feature flag ${JSON.stringify(value)}`,
+    manifest => { manifest.photos[0].album_photo_in_main = value; },
+  ]),
+  ...[null, 'Day 2, Friends', false, {}, [1], ['Day 2', null]].map(value => [
+    `album tags ${JSON.stringify(value)}`,
+    manifest => { manifest.photos[0].album_tags = value; },
+  ]),
   ['invalid date', manifest => { manifest.photos[0].shot_date = '2026-02-30'; }],
   ['missing optimized reference', manifest => { delete manifest.photos[0].optimized_file; }],
   ['asset trailing newline', manifest => { manifest.photos[0].file += '\n'; }],
@@ -208,6 +288,21 @@ for (const [name, mutate] of invalidCases) {
     assert.throws(() => validateManifest(manifest), ManifestError);
   });
 }
+
+test('invalid new fields fail catalog reads without legacy fallback', async t => {
+  const directory = await imageRoot(t);
+  await legacyPhoto(directory);
+  for (const [field, value] of [
+    ['album_photo_in_main', null], ['album_photo_in_main', 'false'],
+    ['album_tags', null], ['album_tags', 'Day 2, Friends'], ['album_tags', ['Day 2', 1]],
+  ]) {
+    const manifest = catalogFixture();
+    manifest.photos[0][field] = value;
+    await writeManifest(directory, manifest);
+    await assert.rejects(getGallery(null, directory), error =>
+      error instanceof ManifestError && error.message.includes(field));
+  }
+});
 
 test('reserved words are allowed as substrings; supported image formats are accepted', () => {
   const manifest = catalogFixture();
@@ -244,7 +339,7 @@ test('asset resolver permits nested assets and legacy images; rejects traversal 
 });
 
 test('export verification checks hashes and blocks unmapped legacy album URLs', async t => {
-  const manifest = catalogFixture();
+  const manifest = featuredCatalogFixture();
   const directory = await imageRoot(t, manifest);
   for (const photo of manifest.photos) {
     for (const [asset, bytes] of [[photo.file, 'image bytes'], [photo.optimized_file, 'optimized bytes']]) {
@@ -257,7 +352,10 @@ test('export verification checks hashes and blocks unmapped legacy album URLs', 
     path.resolve('scripts/verify-catalog.mjs'), directory, ...args,
   ]);
   const result = await verify();
-  assert.match(result.stdout, /6 photos, 4 albums/);
+  assert.match(result.stdout, /9 photos, 3 albums/);
+  assert.match(result.stdout, /Homepage: 7 photos/);
+  assert.match(result.stdout, /\/trip: 5 photos/);
+  assert.match(result.stdout, /\/favorites: 2 photos/);
   assert.match(result.stderr, /CUTOVER NOT VERIFIED/);
   const legacy = await imageRoot(t, null);
   await fs.mkdir(path.join(legacy, 'trip'));

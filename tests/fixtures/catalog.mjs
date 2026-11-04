@@ -47,3 +47,31 @@ export function catalogFixture() {
     ],
   };
 }
+
+export function featuredCatalogFixture() {
+  return {
+    ...catalogFixture(),
+    albums: [
+      { id: 5, name: 'Featured trip', slug: 'trip', load_random: true },
+      { id: 6, name: 'Featured favorites', slug: 'favorites', load_random: false },
+      { id: 13, name: 'An empty album', slug: 'empty-album', load_random: false },
+    ],
+    photos: [
+      photo(1, 'home-false.jpg', { album_photo_in_main: false }),
+      photo(2, 'home-omitted.jpg'),
+      photo(3, 'home-true.jpg', { album_photo_in_main: true }),
+      photo(4, 'featured-shared.jpg', {
+        album_ids: [5, 6], album_photo_in_main: true,
+        tags: ['Nature'], album_tags: ['Day 2', 'Friends, family'],
+        optimized_file: `assets/4/${hash('optimized bytes')}.webp`,
+      }),
+      photo(5, 'album-false.jpg', { album_ids: [5], album_photo_in_main: false, album_tags: ['Album only'] }),
+      photo(6, 'album-omitted.jpg', { album_ids: [5] }),
+      photo(7, 'missing-album-tags.jpg', { album_ids: [5], album_photo_in_main: true }),
+      photo(8, 'empty-album-tags.jpg', { album_ids: [5], album_photo_in_main: true, album_tags: [] }),
+      photo(9, 'empty-home-tags.jpg', {
+        album_ids: [6], album_photo_in_main: true, tags: [], album_tags: ['Album only'],
+      }),
+    ],
+  };
+}

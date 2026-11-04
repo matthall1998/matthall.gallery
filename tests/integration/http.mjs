@@ -7,7 +7,8 @@ import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
-import { catalogFixture } from '../fixtures/catalog.mjs';
+import { catalogFixture, featuredCatalogFixture } from '../fixtures/catalog.mjs';
+import { extractFilters, filterImages } from '../../lib/galleryImages.mjs';
 
 test('production HTTP routes use a fresh, authoritative catalog and safe image serving', async t => {
   const repository = process.cwd();
@@ -103,6 +104,60 @@ test('production HTTP routes use a fresh, authoritative catalog and safe image s
     }
   });
 
+  await t.test('featured photos and effective tags agree across API and server-rendered pages', async () => {
+    const featured = featuredCatalogFixture();
+    await fs.writeFile(manifestPath, JSON.stringify(featured));
+    try {
+      const readGallery = async route => {
+        const response = await get(route);
+        assert.equal(response.status, 200);
+        assert.equal(response.headers.get('cache-control'), 'no-store');
+        const body = await response.json();
+        assert.deepEqual(Object.keys(body).sort(), ['album', 'results']);
+        return body;
+      };
+      const home = await readGallery('/api/images');
+      const trip = await readGallery('/api/images?slug=trip');
+      const favorites = await readGallery('/api/images?slug=favorites');
+      assert.equal(home.album, null);
+      assert.equal(trip.album.id, 5);
+      assert.equal(favorites.album.id, 6);
+      assert.deepEqual(home.results.map(image => image.row_id), [1, 2, 3, 4, 7, 8, 9]);
+      assert.deepEqual(trip.results.map(image => image.row_id).sort((a, b) => a - b), [4, 5, 6, 7, 8]);
+      assert.deepEqual(favorites.results.map(image => image.row_id), [4, 9]);
+      const original = featured.photos.find(image => image.row_id === 4);
+      for (const gallery of [home, trip, favorites]) {
+        const shared = gallery.results.filter(image => image.id === original.id);
+        assert.equal(shared.length, 1);
+        for (const field of ['id', 'file', 'optimized_file', 'album_ids', 'album_tags', 'album_photo_in_main']) {
+          assert.deepEqual(shared[0][field], original[field]);
+        }
+        assert.deepEqual(shared[0].tags, gallery === home ? ['Nature'] : ['Day 2', 'Friends, family']);
+        assert.equal(filterImages(gallery.results, 'Nature').length, gallery === home ? 1 : 0);
+        assert.equal(filterImages(gallery.results, 'Friends, family').length, gallery === home ? 0 : 1);
+        const tags = extractFilters(gallery.results).tags.map(item => item.name);
+        assert.equal(tags.includes('Nature'), gallery === home);
+        assert.equal(tags.includes('Friends, family'), gallery !== home);
+      }
+      for (const row of [6, 7, 8]) {
+        assert.deepEqual(trip.results.find(image => image.row_id === row).tags, []);
+      }
+      assert.deepEqual(home.results.find(image => image.row_id === 9).tags, []);
+      assert.deepEqual(favorites.results.find(image => image.row_id === 9).tags, ['Album only']);
+      for (const [route, gallery] of [['/', home], ['/trip', trip], ['/favorites', favorites]]) {
+        const response = await get(route);
+        assert.equal(response.status, 200);
+        const html = (await response.text()).replaceAll('\\"', '"');
+        const filters = html.match(/"filters":\{"tags":(\[[^\]]*\])/);
+        assert.ok(filters, `Missing server-rendered filters on ${route}`);
+        assert.deepEqual(JSON.parse(filters[1]), extractFilters(gallery.results).tags);
+      }
+      assert.deepEqual(await readGallery('/api/images'), home);
+    } finally {
+      await fs.writeFile(manifestPath, JSON.stringify(manifest));
+    }
+  });
+
   await t.test('atomic activation updates pages and API without rebuilding', async () => {
     const updated = structuredClone(manifest);
     updated.albums[1].name = 'Updated at runtime';
@@ -114,7 +169,15 @@ test('production HTTP routes use a fresh, authoritative catalog and safe image s
   });
 
   await t.test('corrupt and unsupported catalogs fail explicitly, not as empty success', async () => {
-    for (const content of ['{broken', JSON.stringify({ ...manifest, schema_version: 2 })]) {
+    const invalidFields = [
+      ['album_photo_in_main', null], ['album_photo_in_main', 'false'],
+      ['album_tags', null], ['album_tags', 'Day 2, Friends'], ['album_tags', ['Day 2', 1]],
+    ].map(([field, value]) => {
+      const invalid = structuredClone(manifest);
+      invalid.photos[0][field] = value;
+      return JSON.stringify(invalid);
+    });
+    for (const content of ['{broken', JSON.stringify({ ...manifest, schema_version: 2 }), ...invalidFields]) {
       await fs.writeFile(manifestPath, content);
       const response = await get('/api/images');
       assert.equal(response.status, 500);

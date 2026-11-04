@@ -176,14 +176,28 @@ gallery-nextjs/
 - The first two thumbnails load eagerly, with high fetch priority on the first. Remaining thumbnails load when within 100px of the viewport; the gallery reserves their space to avoid fetching off-screen images immediately.
 
 ### Content Structure  
-- With schema v1, the homepage shows ONLY photos with an empty `album_ids` array.
-  All other photos appear only on their album URLs, including photos in several
-  albums. Files are not duplicated per album.
+- With schema v1, the homepage shows photos with an empty `album_ids` array
+  **or** `album_photo_in_main: true` (the panel's **Feature On Gallery** checkbox).
+  Album pages still select by membership in `album_ids`. A featured photo in
+  multiple albums appears once on the homepage and once in each album, with
+  the same photo ID and asset references; memberships and files are not changed
+  or duplicated.
 - Albums use their exact stored `slug` and actual `name` for titles/metadata.
   Renaming an album does not change its URL. Unknown slugs return 404; known
   empty albums display an empty-album message.
-- V1 `people` and `tags` are arrays; commas inside a value are preserved.
-  Only legacy strings are split on commas.
+- V1 `people`, `tags`, and optional `album_tags` are string arrays; commas inside
+  a value (such as `"Friends, family"`) are preserved. Only legacy strings are
+  split on commas.
+- The homepage uses only `tags`; album pages use only `album_tags`, including
+  for featured photos. Empty or missing album tags never fall back to homepage
+  tags, and empty homepage tags never use album tags. These effective tags
+  drive filter options and matching on both pages and `/api/images`; the API
+  retains its `{ results, album }` shape and `slug` query parameter. Raw
+  `album_tags` and the feature flag are preserved when supplied.
+- These are additive schema-v1 fields: omitted `album_photo_in_main` means
+  `false`, and omitted `album_tags` means `[]`. Explicit nulls, non-boolean
+  flags, non-array album tags, and non-string tag entries are invalid and fail
+  explicitly, without falling back to legacy files.
 - Without a manifest, root photos still use `"website": true`, and directory
   albums still use `"private_link": true`. Legacy directories are never merged
   into a manifest catalog or used as an unknown-slug fallback.
@@ -206,12 +220,14 @@ gallery-nextjs/
 
 ```bash
 npm test
+npm run lint
 npm run build
 npm run test:http
 npm run verify:catalog -- /path/to/completed/export
 ```
 
-Unit fixtures cover memberships, exclusion, commas, stable slugs, multi-file
+Unit fixtures cover featured/unfeatured visibility, page-specific tags,
+backward-compatible defaults, memberships, exclusion, commas, stable slugs, multi-file
 rows sharing assets, optional previews, ordering, invalid catalogs, legacy
 fallback, and unsafe paths. HTTP tests start the production build with isolated
 temporary image data and verify status codes, metadata, caching, legacy
@@ -230,6 +246,13 @@ the directory layout; the tool cannot discover those. Any redirects require
 explicit agreement and implementation before cutover.
 
 ## Deployment
+
+For featured photos and album tags, deploy the consumer changes first with
+operator approval. Then run **Export** in the panel, review and explicitly
+**Publish** the updated manifest/assets. Saved tags and flags need a re-export,
+not a photo re-upload, asset duplication, or Baserow migration. Refresh home
+and an affected album after publication; no further application build is needed.
+Existing v1 exports continue working with the defaults above.
 
 This app requires a Node.js runtime and works with:
 
